@@ -33,7 +33,7 @@ def _diseasePrediction(img_path):
 
     print("predicting...")
     dirname = os.path.dirname(__file__)
-    filename = os.path.join(dirname, 'weight\essemble_weight.joblib')
+    filename = os.path.join(dirname, 'weight\ensemble_weight.joblib')
     clf2 = load(filename) 
     y_pred = clf2.predict([features])
     class_pred = classes_dict[str(y_pred[0])]
