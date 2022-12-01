@@ -1,3 +1,4 @@
+# import require libary
 import cv2
 import os
 import math
@@ -7,14 +8,26 @@ import skimage.feature as feature
 from scipy.stats import skew
 
 
-
+# equlization histogram
 def _Equalization(img):
+    '''
+        change the color space to YUV color space in order to separate 
+        the value( Y channel ) and color from the image
+        
+    '''
     img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
     img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)    
     return img_output
 
+# remove background
 def _RemoveBackground(img):
+    '''
+    In order to remove the background I prefer thresholding 
+    the image with HSI color space 
+    the range is Hue 10-110 Saturation 20-255 and value 20-255
+
+    '''
     ## convert to hsv
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # mask image within range
@@ -38,6 +51,8 @@ def _GradientMagnitude(img):
     # finding gradient magnitude using sobel x and y
     grad_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     grad_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+    
+    # calculate the absolute value
     grad_x = cv2.convertScaleAbs(grad_x)
     grad_y = cv2.convertScaleAbs(grad_y)
     
@@ -47,6 +62,13 @@ def _GradientMagnitude(img):
             np.std(grad_y)]
 
 def _ContourFeatures(mask):
+    
+    '''
+    extracting shape features
+    by finding the smallest enclosing circle, height, width, 
+    and center of mass to distinguish the disease
+
+    '''
     # apply morphology for removing some noise 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25,25))
     morph = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
@@ -74,6 +96,14 @@ def _ContourFeatures(mask):
     return [w,h,cx,cy,radius]
 
 def _GLCM(gray):
+    
+    '''
+    extracting texture features
+    by Gray-level co-occurrence matrix algorithm 
+    the calculate the contras, dissimilarity,
+    homogeneity, energy, correlation, ASM
+
+    '''
 
     graycom = feature.graycomatrix(gray, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4], levels=256)
     # Get the GLCM properties
@@ -89,6 +119,7 @@ def _GLCM(gray):
             contrast.tolist()[0], ASM.tolist()[0]]
     
 def _TextureFeatures(img):
+    
     # finding texture features by GLCM method
     gray = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2GRAY)
     G = _GLCM(gray)
@@ -97,8 +128,13 @@ def _TextureFeatures(img):
     return [val for val in G_list]
 
 def _ColorFeatures(img):
+    '''
+    extracting color features from 
+    RGB color space and HSI color space
+
+    '''
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    
+
     # choosing mean , std, correlation, skewness from 3 channel
     mean = [ np.mean(hsv[...,ch]) for ch in range(3)]
     std = [ np.std(img[...,ch]) for ch in range(3)]
@@ -109,6 +145,9 @@ def _ColorFeatures(img):
     return mean + std + corr + kswness
 
 def _KeypointFeatures(img):
+    '''
+    keypoint features using ORB
+    '''
     img = img.copy()
     
     # find keypoints
